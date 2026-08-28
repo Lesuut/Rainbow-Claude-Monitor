@@ -1,0 +1,23 @@
+# Личная конфигурация: пути к аккаунтам и каталогам этой машины.
+# Шаблон лежит в config.example.json, а server.ps1 создаёт config.json сам
+# при первом запуске, если его нет.
+config.json
+
+# Состояние времени выполнения.
+colors.json
+.claims/
+
+# Резервные копии и мусор редакторов.
+*.bak
+*.orig
+*~
+.vscode/
+.idea/
+
+# Логи.
+*.log
+
+# Windows / macOS.
+Thumbs.db
+desktop.ini
+.DS_Store

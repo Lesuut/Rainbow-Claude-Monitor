@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rainbow Claude Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* Every colour below is written from JS on each frame, so the panel can drift
+     between the day and night palettes instead of snapping between them. */
+  :root{
+    --ground:#17130f; --panel:#211b15; --edge:#3a3128;
+    --text:#f6f1e4;   --muted:#9c9083; --track:#100d0a; --pulse-off:#2a241d;
+    --red:#ef4a34; --orange:#f78a2e; --mustard:#f5c542;
+    --green:#7cc14e; --teal:#34aeae; --blue:#4a8ed6;
+    --red-hatch:rgba(239,74,52,.5);
+
+    --f-display:"Unbounded","Rubik",system-ui,sans-serif;
+    --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box}
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--text);
+    font:16px/1.35 var(--f-mono);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app{
+    height:100%;
+    display:grid;
+    grid-template-rows:auto auto minmax(0,72fr) minmax(0,128fr);
+    gap:10px;
+    padding:12px 14px 14px;
+  }
+  /* ui.showMachine = false in config.json: the cards take the whole panel. */
+  .app-bare{grid-template-rows:auto auto minmax(0,1fr)}
+  .app-bare .machine{display:none}
+
+  /* ── header ── */
+  .top{display:flex;align-items:center;gap:14px}
+  .top-title{
+    font-family:var(--f-display);font-weight:800;
+    font-size:22px;letter-spacing:-.01em;margin:0;
+  }
+
+  .theme{
+    margin-left:auto;
+    display:flex;border:2px solid var(--edge);border-radius:20px;overflow:hidden;
+  }
+  .theme-btn{
+    font-family:var(--f-mono);font-size:14px;font-weight:500;
+    letter-spacing:.06em;
+    color:var(--muted);background:transparent;border:0;
+    padding:6px 14px;cursor:pointer;
+    transition:background-color .2s,color .2s;
+  }
+  .theme-btn + .theme-btn{border-left:2px solid var(--edge)}
+  .theme-btn-on{background:var(--mustard);color:var(--ground);font-weight:700}
+
+  .lamp{
+    width:18px;height:18px;border-radius:50%;
+    background:var(--mustard);box-shadow:0 0 18px var(--mustard);
+  }
+  .lamp-off{background:var(--edge);box-shadow:none}
+
+  .rule{display:flex;height:8px;border-radius:4px;overflow:hidden}
+  .rule span{flex:1}
+  .rule-1{background:var(--red)}
+  .rule-2{background:var(--orange)}
+  .rule-3{background:var(--mustard)}
+  .rule-4{background:var(--green)}
+  .rule-5{background:var(--teal)}
+  .rule-6{background:var(--blue)}
+
+  /* ── machine row ── */
+  .machine{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}
+  .instr{
+    background:var(--panel);border-radius:14px;
+    padding:12px 16px;
+    display:flex;align-items:center;gap:18px;
+    min-height:0;overflow:hidden;
+  }
+  .arcs{height:100%;width:auto;aspect-ratio:1/1;flex:0 0 auto}
+  .instr-icon{display:block;width:52px;height:52px;margin-bottom:10px;color:var(--mustard)}
+  .instr-key{
+    font-family:var(--f-display);font-weight:700;
+    font-size:17px;letter-spacing:.05em;text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .instr-sub{font-size:15px;color:var(--muted)}
+  .instr-sub b{color:var(--text);font-weight:500}
+
+  /* ── accounts row ──
+     One column per account up to --cols (written from config.json), then the
+     row wraps. With a single account its card simply takes the whole width. */
+  .tanks{
+    display:grid;
+    grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));
+    grid-auto-rows:minmax(0,1fr);
+    gap:10px;min-height:0;
+  }
+  .tank{
+    position:relative;
+    background:var(--panel);border-radius:14px;
+    border-left:8px solid var(--id);
+    padding:24px 16px 14px;
+    display:flex;flex-direction:column;
+    min-height:0;overflow:hidden;
+  }
+
+  /* Lit while that Claude is mid-turn, dark while it waits for the user. */
+  .tank-pulse{
+    position:absolute;left:0;right:0;top:0;height:10px;
+    background:var(--pulse-off);
+    transition:background-color .25s,box-shadow .25s;
+  }
+  .tank-pulse-on{
+    background:var(--id);
+    box-shadow:0 0 20px -1px var(--id);
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{50%{opacity:.5}}
+
+  /* Ten one-second blinks of the whole column the moment a turn ends, so it
+     can be caught out of the corner of the eye. */
+  .tank-done{animation:done 1s ease-in-out 10}
+  @keyframes done{50%{background-color:var(--flash)}}
+
+  .tank-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .chip{
+    width:16px;height:16px;flex:0 0 auto;
+    border-radius:50%;border:0;padding:0;cursor:pointer;
+    background:var(--id);
+  }
+  /* Colour picker takes over the screen - the panel lives on a small display. */
+  .modal{
+    position:fixed;inset:0;z-index:50;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.66);
+  }
+  .modal[hidden]{display:none}
+  .modal-box{
+    background:var(--panel);border-radius:20px;
+    padding:26px 28px 30px;width:min(92vw,860px);
+  }
+  .modal-title{
+    font-family:var(--f-display);font-weight:700;font-size:22px;
+    text-align:center;margin-bottom:20px;
+  }
+  .modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .pick{
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    background:transparent;border:0;padding:6px;cursor:pointer;
+  }
+  .pick-dot{width:100%;height:66px;border-radius:14px}
+  .pick-name{
+    font-size:16px;font-weight:500;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .pick-on .pick-name{color:var(--text);font-weight:700}
+  .pick-on .pick-dot{outline:4px solid var(--text);outline-offset:4px}
+  .tank-name{
+    font-family:var(--f-display);font-weight:700;
+    font-size:16px;letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tank-age{margin-left:auto;font-size:14px;color:var(--orange)}
+
+  .lane{margin-bottom:10px}
+  .lane-top{display:flex;align-items:baseline;margin-bottom:6px}
+  .lane-key{font-size:14px;font-weight:500;letter-spacing:.1em;color:var(--muted)}
+  .lane-reset{margin-left:auto;font-size:14px;color:var(--muted)}
+  .lane-bot{display:flex;align-items:center;gap:12px}
+  .lane-stack{flex:1;min-width:0}
+  .lane-track{
+    display:block;position:relative;
+    height:66px;border-radius:12px;
+    background:var(--track);border:2px solid var(--edge);
+    overflow:hidden;
+  }
+  /* The hatched danger zone starts where ui.hotPercent says a bar is hot. */
+  .lane-track::after{
+    content:"";position:absolute;top:0;bottom:0;left:calc(var(--hot,90) * 1%);right:0;
+    background:repeating-linear-gradient(135deg,var(--red-hatch) 0 4px,transparent 4px 9px);
+  }
+  .lane-fill{
+    position:absolute;top:0;bottom:0;left:0;width:0;
+    background:repeating-linear-gradient(180deg,var(--fc) 0 18px,var(--seam) 18px 23px);
+    box-shadow:0 0 18px -2px var(--fc);
+    transition:width .6s cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* Time left in the window - thin and solid, never the account colour. */
+  .lane-time{
+    display:block;position:relative;
+    height:12px;margin-top:6px;
+    border-radius:6px;background:var(--track);overflow:hidden;
+  }
+  .lane-time-fill{
+    position:absolute;top:0;bottom:0;left:0;width:0;
+    background:var(--red);
+  }
+
+  .lane-val{
+    font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;
+    min-width:76px;text-align:right;
+  }
+  .lane-val-hot{color:var(--red)}
+  .lane-val-free{color:var(--muted)}
+
+  .launch{
+    margin-top:auto;
+    width:100%;
+    font-family:var(--f-mono);font-size:14px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;
+    color:var(--btn-fg);background:var(--btn-bg);
+    border:2px solid var(--btn-bd);border-radius:22px;
+    padding:8px 0;cursor:pointer;
+    transition:background-color .16s,color .16s;
+  }
+  .launch:hover{background:var(--id);color:var(--ground)}
+
+  :focus-visible{outline:3px solid var(--mustard);outline-offset:3px}
+
+  @media (prefers-reduced-motion:reduce){
+    .lane-fill{transition:none}
+    .tank-pulse-on{animation:none}
+    .tank-done{animation-iteration-count:1}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <h1 class="top-title" id="topTitle">Rainbow Claude Monitor</h1>
+    <div class="theme" id="theme" role="group" aria-label="Theme">
+      <button class="theme-btn" data-mode="light" title="Light">☀</button>
+      <button class="theme-btn" data-mode="auto" title="Follows the Kyiv sunset">Auto</button>
+      <button class="theme-btn" data-mode="dark" title="Dark">☾</button>
+    </div>
+    <span class="lamp lamp-off" id="lamp"></span>
+  </header>
+
+  <div class="rule" aria-hidden="true">
+    <span class="rule-1"></span><span class="rule-2"></span><span class="rule-3"></span>
+    <span class="rule-4"></span><span class="rule-5"></span><span class="rule-6"></span>
+  </div>
+
+  <section class="machine">
+    <div class="instr">
+      <svg class="arcs" id="cpuArcs" viewBox="0 0 200 200" role="img" aria-label="CPU load"></svg>
+      <div>
+        <svg class="instr-icon" viewBox="0 0 48 48" aria-hidden="true"
+             fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <rect x="12" y="12" width="24" height="24" rx="3"/>
+          <rect x="20" y="20" width="8" height="8" rx="1.5"/>
+          <path d="M18 12V5M24 12V5M30 12V5M18 43v-7M24 43v-7M30 43v-7"/>
+          <path d="M12 18H5M12 24H5M12 30H5M43 18h-7M43 24h-7M43 30h-7"/>
+        </svg>
+        <div class="instr-key">Processor</div>
+        <div class="instr-sub" id="cpuCores">—</div>
+      </div>
+    </div>
+    <div class="instr">
+      <svg class="arcs" id="ramArcs" viewBox="0 0 200 200" role="img" aria-label="Memory load"></svg>
+      <div>
+        <svg class="instr-icon" viewBox="0 0 48 48" aria-hidden="true"
+             fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M5 14h38v20H29l-2 5h-6l-2-5H5z"/>
+          <path d="M13 21v6M21 21v6M27 21v6M35 21v6"/>
+        </svg>
+        <div class="instr-key">Memory</div>
+        <div class="instr-sub"><b id="ramUsed">—</b> / <span id="ramTotal">—</span> GB</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tanks" id="tanks"></section>
+
+</div>
+
+<div class="modal" id="picker" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+    <div class="modal-title" id="pickerTitle"></div>
+    <div class="modal-grid" id="pickerGrid"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ══ config ════════════════════════════════════════════════════════════════
+   Mirrors the "ui" block of config.json. The values below are only what the
+   panel falls back to if /api/config cannot be read; the server is the source
+   of truth and is asked once, before anything is drawn. */
+var CFG = {
+  title:"Rainbow Claude Monitor",
+  columns:"auto",        // cards per row, or "auto"
+  theme:"auto",          // startup theme, unless this browser remembers a pick
+  duskMinutes:45,        // length of the day <-> night fade
+  refreshMs:1000,        // how often the numbers are re-read
+  showMachine:true,      // the CPU / memory row
+  showSevenDay:true,     // the weekly bar under the 5-hour one
+  hotPercent:90,         // where a bar turns red
+  accents:{}             // per-name overrides of the nine /color colours
+};
+
+/* ══ palettes ══════════════════════════════════════════════════════════════
+   Two full sets of tokens. Anything on screen is a blend of the two, mixed by
+   a single 0..1 "night" number, so dusk is a drift rather than a switch. */
+var TOKENS = ["ground","panel","edge","text","muted","track","pulseOff",
+              "red","orange","mustard","green","teal","blue"];
+
+var DAY = {
+  ground:[239,231,214], panel:[248,242,228], edge:[211,197,168],
+  text:[36,31,28], muted:[124,113,102], track:[224,213,189], pulseOff:[211,197,168],
+  red:[200,68,46], orange:[217,118,31], mustard:[191,143,22],
+  green:[93,150,57], teal:[43,125,125], blue:[58,110,168]
+};
+var NIGHT = {
+  ground:[23,19,15], panel:[33,27,21], edge:[58,49,40],
+  text:[246,241,228], muted:[156,144,131], track:[16,13,10], pulseOff:[42,36,29],
+  red:[239,74,52], orange:[247,138,46], mustard:[245,197,66],
+  green:[124,193,78], teal:[52,174,174], blue:[74,142,214]
+};
+
+var CSS_VAR = {
+  ground:"--ground", panel:"--panel", edge:"--edge", text:"--text",
+  muted:"--muted", track:"--track", pulseOff:"--pulse-off",
+  red:"--red", orange:"--orange", mustard:"--mustard",
+  green:"--green", teal:"--teal", blue:"--blue"
+};
+
+var P = {};                       // the palette in force this frame
+function rgb(c){ return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"; }
+function lerp(a, b, t){
+  return [Math.round(a[0] + (b[0] - a[0]) * t),
+          Math.round(a[1] + (b[1] - a[1]) * t),
+          Math.round(a[2] + (b[2] - a[2]) * t)];
+}
+
+var paletteApplied = null;
+function applyPalette(night){
+  if (paletteApplied !== null && Math.abs(night - paletteApplied) < 0.002) return;
+  paletteApplied = night;
+
+  var root = document.documentElement.style;
+  TOKENS.forEach(function(k){
+    P[k] = lerp(DAY[k], NIGHT[k], night);
+    root.setProperty(CSS_VAR[k], rgb(P[k]));
+  });
+  root.setProperty("--red-hatch", "rgba(" + P.red.join(",") + ",.5)");
+
+  // The seam between bands has to stay visible against a fill that runs from
+  // near-black by day to a bright account colour by night, so it flips too.
+  var seam = lerp([255, 255, 255], [0, 0, 0], night);
+  root.setProperty("--seam", "rgba(" + seam.join(",") + "," + (0.22 + 0.10 * night).toFixed(2) + ")");
+
+  document.querySelectorAll(".arc-ghost").forEach(function(p){
+    p.setAttribute("stroke", rgb(P.edge));
+  });
+  document.querySelectorAll(".arc-live").forEach(function(p){
+    p.setAttribute("stroke", rgb(P[p.getAttribute("data-tone")]));
+  });
+}
+
+/* ══ theme mode: light | auto | dark ═══════════════════════════════════════ */
+var DUSK_MS = 45 * 60e3;          // how long the fade around the sun event lasts
+var mode = null;                  // null until config and localStorage are read
+try { mode = localStorage.getItem("sysmon-theme"); } catch (e) {}
+
+var sun = null;                   // { ok, sunriseMs, sunsetMs } from the server
+var night = { target:1, shown:1 };
+
+/* Full night before dawn and after dusk, plain day between, with a 45-minute
+   ramp on each edge. Falls back to 21:00 / 06:00 local if the sun lookup failed. */
+function nightTarget(nowMs){
+  if (mode === "light") return 0;
+  if (mode === "dark")  return 1;
+
+  var rise, set;
+  if (sun && sun.ok){
+    rise = sun.sunriseMs;
+    set  = sun.sunsetMs;
+  } else {
+    var d = new Date(nowMs);
+    rise = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 6, 0, 0).getTime();
+    set  = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 21, 0, 0).getTime();
+  }
+
+  if (nowMs >= set) return Math.min(1, (nowMs - set) / DUSK_MS);
+  if (nowMs <= rise - DUSK_MS) return 1;
+  if (nowMs < rise) return (rise - nowMs) / DUSK_MS;
+  return 0;
+}
+
+function setMode(next){
+  mode = next;
+  try { localStorage.setItem("sysmon-theme", next); } catch (e) {}
+  document.querySelectorAll(".theme-btn").forEach(function(b){
+    b.classList.toggle("theme-btn-on", b.dataset.mode === next);
+  });
+}
+document.getElementById("theme").addEventListener("click", function(ev){
+  var b = ev.target.closest(".theme-btn");
+  if (b) setMode(b.dataset.mode);
+});
+
+/* ══ arcs ══════════════════════════════════════════════════════════════════ */
+var SVGNS = "http://www.w3.org/2000/svg";
+var CX = 100, CY = 100, START = 225, SWEEP = 270;
+var RINGS = [88, 73, 58, 43, 28];
+var TONES = ["blue", "teal", "green", "mustard", "orange"];
+
+/* The nine names Claude Code's own /color offers, restated in this panel's
+   gamma: deepened for paper by day, bright for the dark panel by night. */
+var SWATCHES = ["red","orange","yellow","green","cyan","blue","purple","pink","default"];
+var COLOR_DAY = {
+  red:[200,68,46], orange:[217,118,31], yellow:[191,143,22], green:[93,150,57],
+  cyan:[43,125,125], blue:[58,110,168], purple:[112,88,168], pink:[186,80,124],
+  "default":[124,113,102]
+};
+var COLOR_NIGHT = {
+  red:[239,74,52], orange:[247,138,46], yellow:[245,197,66], green:[124,193,78],
+  cyan:[52,174,174], blue:[74,142,214], purple:[150,120,214], pink:[232,110,160],
+  "default":[156,144,131]
+};
+function accentNight(name){ return COLOR_NIGHT[name] || COLOR_NIGHT["default"]; }
+function accentDay(name){ return COLOR_DAY[name] || COLOR_DAY["default"]; }
+function accentNow(name){
+  return lerp(accentDay(name), accentNight(name), night.shown);
+}
+
+/* The bar fill by day: the account's own colour pulled halfway to ink. Dark
+   enough to hold its own on paper, still plainly that account's hue. */
+function barDay(name){ return lerp(accentDay(name), INK, 0.5); }
+
+var WINDOW_MS = 5 * 3600e3;
+
+/* By day the usage bars and the launch key go solid ink on paper - the account
+   accents wash out on a light ground. By night they take the account colour
+   back. Both ends blend through the same night factor as everything else. */
+var INK = [26, 22, 19];
+var PAPER = [246, 241, 228];
+
+function polar(r, deg){
+  var a = (deg - 90) * Math.PI / 180;
+  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+}
+function sweepPath(r){
+  var p1 = polar(r, START), p2 = polar(r, START + SWEEP);
+  return "M " + p1[0].toFixed(2) + " " + p1[1].toFixed(2) +
+         " A " + r + " " + r + " 0 1 1 " + p2[0].toFixed(2) + " " + p2[1].toFixed(2);
+}
+function el(tag, attrs){
+  var n = document.createElementNS(SVGNS, tag);
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+function buildArcs(id, reverse){
+  var svg = document.getElementById(id);
+  var tones = reverse ? TONES.slice().reverse() : TONES;
+
+  RINGS.forEach(function(r, i){
+    var len = 2 * Math.PI * r * (SWEEP / 360);
+    svg.appendChild(el("path", {
+      d:sweepPath(r), fill:"none", stroke:"#332b23", class:"arc-ghost",
+      "stroke-width":11, "stroke-linecap":"round"
+    }));
+    svg.appendChild(el("path", {
+      d:sweepPath(r), fill:"none", stroke:"#888", class:"arc-live",
+      "stroke-width":11, "stroke-linecap":"round",
+      "data-len":len, "data-tone":tones[i],
+      "stroke-dasharray":len + " " + (len * 2),
+      "stroke-dashoffset":len
+    }));
+  });
+}
+
+/* Raw CPU readings swing hard between one-second samples, so the arcs chase the
+   reading every frame instead of jumping to it. CPU is the loose one. */
+var anim = {
+  cpuArcs: { target:0, shown:0, painted:null, k:0.0035 },
+  ramArcs: { target:0, shown:0, painted:null, k:0.035 }
+};
+var stillMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function paintArcs(id, pct){
+  var lives = document.getElementById(id).querySelectorAll(".arc-live");
+  for (var i = 0; i < lives.length; i++){
+    var len = parseFloat(lives[i].getAttribute("data-len"));
+    lives[i].style.strokeDashoffset = len * (1 - pct / 100);
+  }
+}
+function setArcs(id, pct){
+  anim[id].target = Math.max(0, Math.min(100, pct));
+}
+
+function frame(){
+  Object.keys(anim).forEach(function(id){
+    var a = anim[id];
+    a.shown = stillMotion ? a.target : a.shown + (a.target - a.shown) * a.k;
+    if (a.painted === null || Math.abs(a.shown - a.painted) > 0.03){
+      paintArcs(id, a.shown);
+      a.painted = a.shown;
+    }
+  });
+
+  night.target = nightTarget(Date.now());
+  night.shown = stillMotion ? night.target
+                            : night.shown + (night.target - night.shown) * 0.06;
+  applyPalette(night.shown);
+
+  requestAnimationFrame(frame);
+}
+
+buildArcs("cpuArcs", false);
+buildArcs("ramArcs", true);
+applyPalette(night.shown);
+
+/* ══ formatting ════════════════════════════════════════════════════════════ */
+function fmtLeft(sec){
+  sec = Math.max(0, Math.round(sec));
+  var d = Math.floor(sec / 86400);
+  var h = Math.floor(sec % 86400 / 3600);
+  var m = Math.floor(sec % 3600 / 60);
+  if (d) return d + "d " + h + "h";
+  if (h) return h + "h " + m + "m";
+  if (m) return m + "m";
+  return "under a minute";
+}
+function fmtAge(ms){
+  var s = ms / 1000;
+  if (s < 90) return "just now";
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  if (d) return d + "d ago";
+  if (h) return h + "h ago";
+  return m + "m ago";
+}
+
+/* The reset timer blends red -> mustard -> green as the window drains. */
+function timeColor(left){
+  return left > 0.5
+    ? rgb(lerp(P.mustard, P.red, (left - 0.5) * 2))
+    : rgb(lerp(P.green, P.mustard, left * 2));
+}
+
+/* ══ accounts ══════════════════════════════════════════════════════════════ */
+var WINDOWS = [["s", "fiveHour", "5H"], ["w", "sevenDay", "WEEK"]];
+var wired = false;
+var wasBusy = {};        // last seen state, to catch the busy -> idle edge
+var picked = {};         // accent chosen this session, ahead of the server echo
+var currentColor = {};   // what the server last reported per account
+
+function flashDone(card){
+  card.classList.remove("tank-done");
+  void card.offsetWidth;               // restart the animation from the top
+  card.classList.add("tank-done");
+}
+
+function buildTanks(list){
+  document.getElementById("tanks").innerHTML = list.map(function(a){
+    var id = a.id;
+    var lanes = WINDOWS.map(function(w){
+      return '<div class="lane">' +
+        '<div class="lane-top">' +
+          '<span class="lane-key">' + w[2] + '</span>' +
+          '<span class="lane-reset" id="rst-' + w[0] + '-' + id + '"></span>' +
+        '</div>' +
+        '<div class="lane-bot">' +
+          '<div class="lane-stack">' +
+            '<span class="lane-track"><span class="lane-fill" id="fill-' + w[0] + '-' + id + '"></span></span>' +
+            (w[0] === "s"
+              ? '<span class="lane-time"><span class="lane-time-fill" id="clock-' + id + '"></span></span>'
+              : "") +
+          '</div>' +
+          '<span class="lane-val" id="val-' + w[0] + '-' + id + '">0%</span>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+    return '<div class="tank" id="tank-' + id + '">' +
+      '<span class="tank-pulse" id="pulse-' + id + '"></span>' +
+      '<div class="tank-head">' +
+        '<button class="chip" data-open="' + id + '" data-label="' + a.label +
+          '" title="Accent colour"></button>' +
+        '<span class="tank-name">' + a.label + '</span>' +
+        '<span class="tank-age" id="age-' + id + '"></span>' +
+      '</div>' + lanes +
+      // No launcher in config.json means there is nothing to start: the card
+      // is a read-out only.
+      (a.canLaunch === false ? ""
+        : '<button class="launch" data-id="' + id + '">Launch</button>') +
+    '</div>';
+  }).join("");
+
+  // One column per account, up to the configured maximum; the rest wrap.
+  var cols = CFG.columns === "auto" ? Math.min(list.length, 3)
+                                    : Math.max(1, parseInt(CFG.columns, 10) || 3);
+  document.getElementById("tanks").style.setProperty("--cols", Math.min(cols, list.length) || 1);
+
+  if (!wired){
+    document.getElementById("tanks").addEventListener("click", function(ev){
+      var launch = ev.target.closest(".launch");
+      if (launch){
+        launch.textContent = "Starting";
+        fetch("/api/launch?id=" + launch.dataset.id, { method:"POST" }).catch(function(){});
+        setTimeout(function(){ launch.textContent = "Launch"; }, 1400);
+        return;
+      }
+      var chip = ev.target.closest(".chip");
+      if (chip) openPicker(chip.dataset.open, chip.dataset.label);
+    });
+    wired = true;
+  }
+}
+
+/* ══ colour picker ═════════════════════════════════════════════════════════ */
+var pickerFor = null;
+var modal = document.getElementById("picker");
+
+function openPicker(id, label){
+  pickerFor = id;
+  document.getElementById("pickerTitle").textContent = label;
+  var current = picked[id] || currentColor[id] || "default";
+  document.getElementById("pickerGrid").innerHTML = SWATCHES.map(function(c){
+    return '<button class="pick' + (c === current ? " pick-on" : "") + '" data-color="' + c + '">' +
+      '<span class="pick-dot" style="background:' + rgb(accentNow(c)) + '"></span>' +
+      '<span class="pick-name">' + c + '</span>' +
+    '</button>';
+  }).join("");
+  modal.hidden = false;
+}
+function closePicker(){ modal.hidden = true; pickerFor = null; }
+
+modal.addEventListener("click", function(ev){
+  var b = ev.target.closest(".pick");
+  if (!b){ if (!ev.target.closest(".modal-box")) closePicker(); return; }
+  var id = pickerFor;
+  picked[id] = b.dataset.color;                 // show it before the write lands
+  fetch("/api/color?id=" + id + "&name=" + b.dataset.color, { method:"POST" })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if (!j || !j.windows) delete picked[id]; })  // nothing took it
+    .catch(function(){ delete picked[id]; });
+  closePicker();
+});
+document.addEventListener("keydown", function(ev){
+  if (ev.key === "Escape" && !modal.hidden) closePicker();
+});
+
+function windowState(node, nowMs){
+  if (!node) return null;
+  var reset = node.resetsAt ? Date.parse(node.resetsAt) : null;
+  var expired = reset !== null && reset <= nowMs;
+  return {
+    pct: expired ? 0 : (node.percent == null ? 0 : node.percent),
+    reset: reset,
+    expired: expired
+  };
+}
+
+function paintTanks(list, nowMs){
+  list.forEach(function(a){
+    var id = a.id;
+    // An accent belongs to a live window. With every window of the account
+    // closed there is nothing wearing the colour, so the card falls back to the
+    // neutral grey - and the optimistic pick is dropped with it, or it would
+    // outlive the process it was meant for.
+    var live = !!(a.session && a.session.running > 0);
+    if (!live) delete picked[id];
+    currentColor[id] = live ? (a.colorName || "default") : "default";
+    var tone = picked[id] || currentColor[id];
+    var accent = accentNow(tone);
+    var tint = rgb(accent);
+    var card = document.getElementById("tank-" + id);
+    var n = night.shown;
+    var barColor = rgb(lerp(barDay(tone), accentNight(tone), n));
+
+    card.style.setProperty("--id", tint);
+    card.style.setProperty("--flash", rgb(lerp(P.panel, accent, 0.45)));
+    card.style.setProperty("--btn-bg", "rgba(" + INK.join(",") + "," + (1 - n).toFixed(3) + ")");
+    card.style.setProperty("--btn-fg", rgb(lerp(PAPER, accentNight(tone), n)));
+    card.style.setProperty("--btn-bd", rgb(lerp(INK, accentNight(tone), n)));
+
+    WINDOWS.forEach(function(w){
+      var st = windowState(a[w[1]], nowMs);
+      var val = document.getElementById("val-" + w[0] + "-" + id);
+      var fill = document.getElementById("fill-" + w[0] + "-" + id);
+      var rst = document.getElementById("rst-" + w[0] + "-" + id);
+      if (!st){
+        val.textContent = "—";
+        val.className = "lane-val lane-val-free";
+        fill.style.width = "0";
+        rst.textContent = "no data";
+        return;
+      }
+      var free = st.expired || (st.pct === 0 && st.reset === null);
+      val.textContent = Math.round(st.pct) + "%";
+      val.className = "lane-val" + (st.pct >= CFG.hotPercent ? " lane-val-hot" : free ? " lane-val-free" : "");
+      fill.style.width = Math.max(0, Math.min(100, st.pct)) + "%";
+      fill.style.setProperty("--fc", st.pct >= CFG.hotPercent ? rgb(P.red) : barColor);
+      rst.textContent = free ? "free"
+        : st.reset === null ? ""
+        : fmtLeft((st.reset - nowMs) / 1000) + " left";
+
+      if (w[0] === "s"){
+        var clock = document.getElementById("clock-" + id);
+        var left = (st.reset === null || free) ? 1 : (st.reset - nowMs) / WINDOW_MS;
+        left = Math.max(0, Math.min(1, left));
+        clock.style.width = (left * 100).toFixed(2) + "%";
+        clock.style.backgroundColor = timeColor(left);
+      }
+    });
+
+    var busy = !!(a.session && a.session.status === "busy");
+    document.getElementById("pulse-" + id).classList.toggle("tank-pulse-on", busy);
+    if (wasBusy[id] === true && !busy) flashDone(card);
+    wasBusy[id] = busy;
+
+    // Live data needs no caption; only a fallback to the local cache does.
+    var age = document.getElementById("age-" + id);
+    if (a.source === "api"){
+      age.textContent = "";
+    } else if (a.fetchedAtMs){
+      age.textContent = "cache · " + fmtAge(nowMs - a.fetchedAtMs);
+    } else {
+      age.textContent = "no data";
+    }
+  });
+}
+
+/* ══ poll ══════════════════════════════════════════════════════════════════ */
+var listBuilt = false;
+
+function tick(){
+  fetch("/api/stats", { cache:"no-store" })
+    .then(function(r){ return r.json(); })
+    .then(function(s){
+      document.getElementById("lamp").classList.remove("lamp-off");
+      sun = s.sun;
+      setArcs("cpuArcs", s.cpu.percent);
+      setArcs("ramArcs", s.ram.percent);
+      document.getElementById("cpuCores").textContent = s.cpu.threads + " threads";
+      document.getElementById("ramUsed").textContent = s.ram.usedGB;
+      document.getElementById("ramTotal").textContent = s.ram.totalGB;
+
+      if (!listBuilt){ buildTanks(s.accounts); listBuilt = true; }
+      paintTanks(s.accounts, s.nowMs);
+    })
+    .catch(function(){
+      document.getElementById("lamp").classList.add("lamp-off");
+    });
+}
+
+/* ══ boot ══════════════════════════════════════════════════════════════════
+   Nothing is drawn until the server has said what this panel is: how many
+   columns, which theme, whether the machine row is wanted. /api/config mirrors
+   the "ui" block of config.json; if it cannot be read the defaults at the top
+   of this script stand in. */
+function applyConfig(c){
+  Object.keys(CFG).forEach(function(k){
+    if (c && c[k] !== undefined && c[k] !== null) CFG[k] = c[k];
+  });
+
+  document.title = CFG.title;
+  document.getElementById("topTitle").textContent = CFG.title;
+
+  document.querySelector(".app").classList.toggle("app-bare", !CFG.showMachine);
+  if (!CFG.showSevenDay) WINDOWS = [WINDOWS[0]];
+  document.documentElement.style.setProperty("--hot", CFG.hotPercent);
+  DUSK_MS = Math.max(1, CFG.duskMinutes) * 60e3;
+
+  // Overrides for the nine /color names. Anything not named keeps its own
+  // shade, and a name the server would not accept is ignored.
+  Object.keys(CFG.accents || {}).forEach(function(name){
+    var o = CFG.accents[name];
+    if (!o || SWATCHES.indexOf(name) < 0) return;
+    if (o.day   && o.day.length   === 3) COLOR_DAY[name]   = o.day;
+    if (o.night && o.night.length === 3) COLOR_NIGHT[name] = o.night;
+  });
+
+  // A theme picked in this browser outranks the one in config.json.
+  setMode(mode || CFG.theme || "auto");
+}
+
+function boot(){
+  fetch("/api/config", { cache:"no-store" })
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return null; })
+    .then(function(c){
+      applyConfig(c);
+      paletteApplied = null;                 // config may have moved the palette
+      night.shown = night.target = nightTarget(Date.now());
+      applyPalette(night.shown);
+      requestAnimationFrame(frame);
+      tick();
+      setInterval(tick, Math.max(200, CFG.refreshMs));
+    });
+}
+
+boot();
+</script>
+</body>
+</html>

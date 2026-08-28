@@ -1,0 +1,73 @@
+{
+  "//": "Copy to config.json and edit. Every key is optional except accounts[].id and accounts[].configDir.",
+
+  "//title": "Text in the browser tab and in the panel header.",
+  "title": "Rainbow Claude Monitor",
+
+  "//port": "Local port. The panel is served at http://127.0.0.1:<port>/ and never listens on the network.",
+  "port": 8777,
+
+  "//openBrowser": "Open the default browser when the server starts.",
+  "openBrowser": true,
+
+  "//location": "Coordinates used to look up sunrise/sunset for the auto theme. null = no lookup, fall back to 06:00 / 21:00 local.",
+  "location": { "lat": 50.4501, "lng": 30.5234 },
+
+  "ui": {
+    "//columns": "Cards per row: a number, or \"auto\" (1-3 accounts -> one row, 4+ -> rows of 3).",
+    "columns": "auto",
+
+    "//theme": "Startup theme: \"light\", \"dark\" or \"auto\" (follows the sun at location). The header toggle overrides it and is remembered per browser.",
+    "theme": "auto",
+
+    "//duskMinutes": "Length of the fade between day and night palettes around sunrise/sunset.",
+    "duskMinutes": 45,
+
+    "//refreshMs": "How often the page asks the server for fresh numbers.",
+    "refreshMs": 1000,
+
+    "//showMachine": "Show the CPU / memory row.",
+    "showMachine": true,
+
+    "//showSevenDay": "Show the weekly limit bar under the 5-hour one.",
+    "showSevenDay": true,
+
+    "//hotPercent": "Percentage at which a bar turns red.",
+    "hotPercent": 90,
+
+    "//accents": "Optional overrides for the nine /color names, [r,g,b] each. Example: { \"blue\": { \"day\": [58,110,168], \"night\": [74,142,214] } }",
+    "accents": {}
+  },
+
+  "usage": {
+    "//source": "\"auto\" - ask the Claude usage endpoint, fall back to the on-disk cache; \"api\" - live only; \"cache\" - never leave the machine.",
+    "source": "auto",
+
+    "//liveOkSec": "Seconds between live polls of a healthy account.",
+    "liveOkSec": 120,
+
+    "//liveBadSec": "Back-off after a failed live poll.",
+    "liveBadSec": 600
+  },
+
+  "launch": {
+    "//autoColor": "After Launch, type /color <accent> into the window that just opened.",
+    "autoColor": true,
+
+    "//trustPromptKeys": "Keys sent to a brand-new window to answer \"Do you trust this folder?\". \"\" disables it. Names: up down left right enter tab esc space.",
+    "trustPromptKeys": "down,enter",
+
+    "//waitSec": "How long to wait for the launched window to appear before giving up.",
+    "waitSec": 90
+  },
+
+  "//accounts": "One entry per Claude account. id: any short slug, unique. label: shown on the card. configDir: CLAUDE_CONFIG_DIR of that account - absolute, or relative to %USERPROFILE%. launcher (optional): exe or shortcut the Launch button starts - absolute, or a name looked up on the Desktop, in %USERPROFILE% and in PATH; omit it and the card simply has no Launch button. launchArgs (optional): array of arguments. workingDir (optional): folder the window opens in, default %USERPROFILE%. accent (optional): colour a launched window is painted with - red orange yellow green cyan blue purple pink default.",
+  "accounts": [
+    {
+      "id": "main",
+      "label": "Claude",
+      "configDir": ".claude",
+      "accent": "blue"
+    }
+  ]
+}
