@@ -184,6 +184,9 @@ you log in, drop a shortcut to that .bat into startup:
 explorer shell:startup
 ```
 
+Double-clicking it again later costs nothing: the server checks the port first,
+and when the panel is already running it simply opens the browser at it.
+
 ---
 
 ## How it works

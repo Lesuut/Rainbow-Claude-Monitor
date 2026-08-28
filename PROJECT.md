@@ -53,7 +53,8 @@ Accept: application/json
 User-Agent: claude-cli/<ver> (external, cli)
 ```
 
-Polled every 2 minutes per account; 10 minutes after an error. `server.ps1`
+Polled every `usage.liveOkSec` seconds per account (2 minutes by default), and
+backed off to `usage.liveBadSec` (10 minutes) after an error. `server.ps1`
 tries three header sets and remembers the one that worked (`$hdrStyle`). The
 response carries `five_hour` / `seven_day` with `utilization` and `resets_at`.
 
@@ -145,18 +146,25 @@ session is impossible — `sessions/<pid>.json` only appears after the folder
 trust question is answered, and that question is exactly what the waiter is
 waiting on.
 
-Then: 4 s for the TUI to draw → `poke.ps1 -Keys "down,enter"`, i.e. "Yes, I
-trust this folder" → wait for the session to appear → `POST /api/color` with
-`pid`, so that exactly this window is painted rather than every window of the
-account. If the session already exists (the folder was trusted earlier) the keys
-are not sent: the prompt is live, and Down plus Enter would land in the
-conversation.
+The process shows up while its TUI is still being drawn, so a key pressed right
+away lands before there is a prompt to take it: the waiter sleeps a second, then
+sends `poke.ps1 -Keys "down,enter"` — "Yes, I trust this folder". If the window
+already has a `sessions/<pid>.json` it answered that question on an earlier run
+and its input line is live, so no keys are sent: Down plus Enter would be typed
+into the conversation.
 
-On startup the server strips every `CLAUDE*` and `AI_AGENT` variable from its
-own environment. Otherwise, when the panel is started from inside Claude Code
-itself, a new window inherits `CLAUDE_CODE_CHILD_SESSION` (writes no session —
-the panel never sees it and never paints it) and `CLAUDE_CONFIG_DIR` from
-another account.
+Colour goes on last, and only once the session file exists (up to a minute of
+waiting) — that is the same moment the panel starts counting the window as
+running. `POST /api/color` carries the `pid`, so exactly this window is painted
+rather than every window of the account.
+
+On startup the server strips `CLAUDE*`, `AI_AGENT`, `NO_COLOR` and `FORCE_COLOR`
+from its own environment. Otherwise, when the panel is started from inside
+Claude Code itself, a new window inherits `CLAUDE_CODE_CHILD_SESSION` (writes no
+session — the panel never sees it and never paints it) and `CLAUDE_CONFIG_DIR`
+from another account. `NO_COLOR` is in the same set: a Claude Code shell sets it
+for its children, and carried this far it reaches the launched window's own TUI,
+which then draws monochrome no matter what `/color` says.
 
 ## Caveats
 
@@ -180,6 +188,11 @@ powershell -ExecutionPolicy Bypass -File server.ps1
 ```
 Then <http://127.0.0.1:8777>. The port comes from `config.json` and can be
 overridden for one run with `-Port`.
+
+Starting it a second time is harmless: before binding, the server probes the
+port, and if the panel already answers there it just opens the browser and
+exits. That is what makes the .bat safe to leave in startup and to double-click
+afterwards.
 
 ## API
 
