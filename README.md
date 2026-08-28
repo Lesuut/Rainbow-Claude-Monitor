@@ -1,104 +1,109 @@
 # Rainbow Claude Monitor
 
-Маленькая локальная веб-панель для второго монитора: нагрузка ПК и живые статусы
-всех ваших аккаунтов Claude Code на одном экране.
+**English** · [Русский](README.ru.md)
+
+A small local web panel for your second screen: machine load and the live state
+of every one of your Claude Code accounts, all at a glance.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshot-dark.jpg" alt="Панель ночью"></td>
-    <td width="50%"><img src="docs/screenshot-light.jpg" alt="Панель днём"></td>
+    <td width="50%"><img src="docs/screenshot-dark.jpg" alt="The panel at night"></td>
+    <td width="50%"><img src="docs/screenshot-light.jpg" alt="The panel during the day"></td>
   </tr>
   <tr>
-    <td align="center"><b>ночь</b></td>
-    <td align="center"><b>день</b></td>
+    <td align="center"><b>night</b></td>
+    <td align="center"><b>day</b></td>
   </tr>
 </table>
 
-Одна и та же панель: тема не переключается щелчком, а плавно переезжает
-вместе с закатом в вашем городе.
+The same panel: the theme is not a switch you flip, it drifts along with sunset
+in your city.
 
-## Зачем это нужно
+## Why
 
-Если у вас несколько аккаунтов Claude (личный, второй личный, рабочий), то
-единственный способ узнать, где ещё остался лимит, — открыть окно и набрать
-`/status`. А когда окон четыре и все чем-то заняты, непонятно даже, кто из них
-сейчас думает, а кто уже ждёт вашего ответа.
+If you run several Claude accounts (personal, second personal, work), the only
+way to find out where you still have headroom is to open a window and type
+`/status`. And once four windows are open and all of them are busy, you cannot
+even tell which one is still thinking and which is already waiting for you.
 
-Панель отвечает на эти вопросы, ничего не спрашивая:
+The panel answers all of that without being asked:
 
-- сколько процентов 5-часового и недельного окна съедено на **каждом** аккаунте;
-- когда окно сбросится;
-- какие сессии прямо сейчас **работают**, а какие **ждут ввода**;
-- не задыхается ли сама машина (CPU / RAM);
-- и позволяет запустить нужный аккаунт кнопкой, сразу покрасив его окно в свой цвет.
+- how much of the 5-hour and the weekly window is spent on **each** account;
+- when the window resets;
+- which sessions are **working** right now and which are **waiting for input**;
+- whether the machine itself is choking (CPU / RAM);
+- and it launches the account you need with one button, painting its window in
+  that account's colour right away.
 
-Рассчитана на то, чтобы висеть в углу дополнительного экрана и не требовать
-внимания: не прокручивается, сама плавно переезжает из светлой темы в тёмную
-к закату, а карточка коротко мигает в момент, когда её Claude закончил ход.
+It is built to sit in the corner of a spare monitor and never ask for attention:
+it does not scroll, it slides from the light palette into the dark one as the
+sun goes down, and a card blinks briefly the moment its Claude finishes a turn.
 
-## Что умеет
+## What it does
 
 | | |
 |---|---|
-| **Лимиты** | полосы `5H` и `WEEK` на каждый аккаунт: процент, сколько осталось до сброса (`2h 8m left`), `free` — если окно уже сброшено |
-| **Свежесть данных** | если живой запрос не прошёл, на карточке видно `cache · 4h ago` — числа старые, и это не скрывается |
-| **Живой статус** | видит запущенные сессии Claude Code: работает / ждёт ввода, карточка мигает, когда её Claude закончил ход |
-| **Железо** | радужные дуги загрузки CPU и RAM, число потоков, занято / всего памяти |
-| **Цвета** | у каждого аккаунта свой акцент из тех же девяти, что у команды `/color`; клик по кружку меняет |
-| **Launch** | кнопка запускает ярлык аккаунта, отвечает на вопрос «доверяете ли папке» и красит окно |
-| **Темы** | светлая / авто / тёмная; в авто — плавный дрейф по восходу и закату для ваших координат |
-| **Ноль зависимостей** | Windows PowerShell 5.1 + браузер. Ни Node, ни Python, ни установки |
-| **Локально** | слушает только `127.0.0.1`, наружу не смотрит, ничего не собирает |
+| **Limits** | `5H` and `WEEK` bars per account: percentage, time left until the reset (`2h 8m left`), `free` once the window has reset |
+| **Freshness** | when the live request fails, the card says `cache · 4h ago` — the numbers are stale and it does not hide that |
+| **Live status** | sees running Claude Code sessions: working / waiting for input, and a card blinks when its Claude has finished a turn |
+| **Machine** | rainbow arcs for CPU and RAM load, thread count, used / total memory |
+| **Colours** | every account gets an accent out of the same nine `/color` offers; click the dot to change it |
+| **Launch** | the button starts the account's launcher, answers the "do you trust this folder" prompt and paints the window |
+| **Themes** | light / auto / dark; auto drifts with sunrise and sunset at your coordinates |
+| **No dependencies** | Windows PowerShell 5.1 and a browser. No Node, no Python, nothing to install |
+| **Local** | listens on `127.0.0.1` only, looks nowhere else, collects nothing |
 
-## Требования
+## Requirements
 
-- Windows 10/11, Windows PowerShell 5.1 (стоит из коробки);
-- Claude Code, установленный хотя бы для одного аккаунта;
-- браузер.
+- Windows 10/11 with Windows PowerShell 5.1 (ships with the OS);
+- Claude Code installed for at least one account;
+- a browser.
 
-Права администратора не нужны: префикс `127.0.0.1` не занят системой.
-
----
-
-## Способ 1: просто попросите своего Клода всё настроить
-
-Самый быстрый путь. Склонируйте репозиторий, откройте в его папке Claude Code
-и скажите примерно так:
-
-> Прочитай README.md и PROJECT.md в этой папке. Найди все мои аккаунты Claude
-> Code на этой машине (каталоги вида `~/.claude*`, ярлыки и .exe-лаунчеры на
-> рабочем столе и в `%USERPROFILE%`), составь под них `config.json` по образцу
-> `config.example.json`, подставь мои координаты для темы (город — Киев),
-> раздай аккаунтам разные цвета, запусти сервер и проверь, что панель
-> открывается и лимиты по всем аккаунтам показываются. Если какой-то аккаунт
-> отдаёт кэш вместо живых данных — скажи, почему, посмотрев `/api/debug`.
-
-Он сам разложит каталоги по `accounts[]`, поставит порт, тему и координаты,
-запустит `server.ps1` и покажет, что получилось. Дальше можно просить его же:
-«добавь четвёртый аккаунт», «поставь порт 9000», «сделай тему всегда тёмной»,
-«положи ярлык в автозагрузку».
+No admin rights: the `127.0.0.1` prefix is not a reserved URL namespace.
 
 ---
 
-## Способ 2: настроить руками
+## Option 1: just ask your own Claude to set it up
 
-### Быстрый старт
+The fastest path. Clone the repo, open Claude Code in that folder and say
+something like:
+
+> Read README.md and PROJECT.md in this folder. Find every Claude Code account
+> on this machine (directories like `~/.claude*`, plus the shortcuts and .exe
+> launchers on the Desktop and in `%USERPROFILE%`), write a `config.json` for
+> them following `config.example.json`, put in my coordinates for the theme (my
+> city is Kyiv), give each account a different colour, start the server and
+> check that the panel opens and shows limits for all accounts. If any account
+> falls back to the cache instead of live data, look at `/api/debug` and tell me
+> why.
+
+It will map the directories into `accounts[]`, set the port, theme and
+coordinates, run `server.ps1` and show you the result. From then on you can keep
+asking it: "add a fourth account", "move it to port 9000", "make the theme
+always dark", "put a shortcut in startup".
+
+---
+
+## Option 2: set it up by hand
+
+### Quick start
 
 ```powershell
-git clone <репозиторий> "System Monitor"
-cd "System Monitor"
+git clone https://github.com/Lesuut/Rainbow-Claude-Monitor.git
+cd Rainbow-Claude-Monitor
 powershell -ExecutionPolicy Bypass -File server.ps1
 ```
 
-При первом запуске `config.json` создаётся сам — с одним аккаунтом, смотрящим в
-`~/.claude`. Панель откроется на <http://127.0.0.1:8777>.
+On the first run `config.json` writes itself — one account pointing at
+`~/.claude`. The panel opens at <http://127.0.0.1:8777>.
 
-Дальше правите `config.json` под себя и перезапускаете сервер. Полный образец со
-всеми ключами и пояснениями — `config.example.json`.
+After that you edit `config.json` and restart the server. The full sample with
+every key and a comment on each is `config.example.json`.
 
-### Аккаунты
+### Accounts
 
-Главное, что нужно настроить, — блок `accounts[]`. Одна запись на аккаунт:
+The one thing you really have to configure is `accounts[]`. One entry per
+account:
 
 ```json
 {
@@ -111,61 +116,60 @@ powershell -ExecutionPolicy Bypass -File server.ps1
 }
 ```
 
-| Поле | Обязательно | Что это |
+| Field | Required | Meaning |
 |---|---|---|
-| `id` | да | короткий уникальный слаг, используется в API |
-| `configDir` | да | `CLAUDE_CONFIG_DIR` аккаунта: абсолютный путь или относительный от `%USERPROFILE%` |
-| `label` | нет | подпись на карточке |
-| `launcher` | нет | .exe или ярлык для кнопки Launch: абсолютный путь либо имя, которое ищется на рабочем столе, в `%USERPROFILE%` и в `PATH`. Без него карточка просто без кнопки |
-| `launchArgs` | нет | массив аргументов запуска |
-| `workingDir` | нет | папка, в которой откроется окно; по умолчанию `%USERPROFILE%` |
-| `accent` | нет | цвет окна: `red orange yellow green cyan blue purple pink default` |
+| `id` | yes | short unique slug, used by the API |
+| `configDir` | yes | the account's `CLAUDE_CONFIG_DIR`: an absolute path, or one relative to `%USERPROFILE%` |
+| `label` | no | the name on the card |
+| `launcher` | no | the .exe or shortcut the Launch button starts: an absolute path, or a name looked up on the Desktop, in `%USERPROFILE%` and in `PATH`. Omit it and the card simply has no button |
+| `launchArgs` | no | array of arguments |
+| `workingDir` | no | the folder the window opens in; `%USERPROFILE%` by default |
+| `accent` | no | the window's colour: `red orange yellow green cyan blue purple pink default` |
 
-**Где взять `configDir`.** Если аккаунт один — это `.claude`. Если несколько, их
-разводит переменная `CLAUDE_CONFIG_DIR` в ярлыке запуска; посмотрите, какие
-каталоги есть:
+**Finding `configDir`.** With a single account it is `.claude`. Several accounts
+are kept apart by `CLAUDE_CONFIG_DIR` in their launchers; list what you have:
 
 ```powershell
 Get-ChildItem $env:USERPROFILE -Directory -Filter ".claude*" | Select-Object Name
 ```
 
-Настоящий каталог аккаунта содержит `.credentials.json` и `.claude.json`.
+A real account directory contains `.credentials.json` and `.claude.json`.
 
-### Остальные настройки
+### Everything else
 
-| Ключ | По умолчанию | Что делает |
+| Key | Default | What it does |
 |---|---|---|
-| `title` | `Rainbow Claude Monitor` | заголовок вкладки и шапки |
-| `port` | `8777` | локальный порт |
-| `openBrowser` | `true` | открывать браузер при старте сервера |
-| `location` | Киев | координаты для восхода/заката; `null` — откат на 06:00 / 21:00 |
-| `ui.columns` | `"auto"` | карточек в ряд: число или `auto` (1–3 → один ряд, 4+ → по трое) |
-| `ui.theme` | `"auto"` | стартовая тема: `light`, `dark`, `auto`. Тумблер в шапке перекрывает и запоминается в браузере |
-| `ui.duskMinutes` | `45` | длина растяжки между дневной и ночной палитрой вокруг заката |
-| `ui.refreshMs` | `1000` | как часто страница ходит за свежими числами |
-| `ui.showMachine` | `true` | показывать ряд CPU / RAM |
-| `ui.showSevenDay` | `true` | показывать недельную полосу |
-| `ui.hotPercent` | `90` | процент, с которого полоса краснеет |
-| `ui.accents` | `{}` | свои RGB для девяти имён: `{ "blue": { "day": [58,110,168], "night": [74,142,214] } }` |
-| `usage.source` | `"auto"` | `auto` — живой запрос с откатом на кэш; `api` — только живой; `cache` — не выходить в сеть |
-| `usage.liveOkSec` | `120` | пауза между живыми опросами здорового аккаунта |
-| `usage.liveBadSec` | `600` | пауза после ошибки |
-| `launch.autoColor` | `true` | красить окно после запуска |
-| `launch.trustPromptKeys` | `"down,enter"` | клавиши в ответ на «Do you trust this folder?»; `""` — не отвечать |
-| `launch.waitSec` | `90` | сколько ждать появления запущенного окна |
+| `title` | `Rainbow Claude Monitor` | text in the browser tab and the panel header |
+| `port` | `8777` | local port |
+| `openBrowser` | `true` | open the browser when the server starts |
+| `location` | Kyiv | coordinates for the sunrise/sunset lookup; `null` falls back to 06:00 / 21:00 local |
+| `ui.columns` | `"auto"` | cards per row: a number, or `auto` (1–3 → one row, 4+ → rows of three) |
+| `ui.theme` | `"auto"` | startup theme: `light`, `dark`, `auto`. The header toggle overrides it and is remembered per browser |
+| `ui.duskMinutes` | `45` | length of the fade between the day and night palettes around sunset |
+| `ui.refreshMs` | `1000` | how often the page asks for fresh numbers |
+| `ui.showMachine` | `true` | show the CPU / memory row |
+| `ui.showSevenDay` | `true` | show the weekly bar |
+| `ui.hotPercent` | `90` | percentage at which a bar turns red |
+| `ui.accents` | `{}` | your own RGB for the nine names: `{ "blue": { "day": [58,110,168], "night": [74,142,214] } }` |
+| `usage.source` | `"auto"` | `auto` — live request with a fallback to the cache; `api` — live only; `cache` — never leave the machine |
+| `usage.liveOkSec` | `120` | seconds between live polls of a healthy account |
+| `usage.liveBadSec` | `600` | back-off after a failed poll |
+| `launch.autoColor` | `true` | paint the window after launching it |
+| `launch.trustPromptKeys` | `"down,enter"` | keys sent to answer "Do you trust this folder?"; `""` disables it |
+| `launch.waitSec` | `90` | how long to wait for the launched window to appear |
 
-Аргументы командной строки перекрывают конфиг на один запуск — удобно для второй
-копии панели:
+Command-line arguments override the config for one run, which is what a second
+copy of the panel needs:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File server.ps1 -Port 8778 -NoBrowser
 ```
 
-### Запуск и автозагрузка
+### Running it and starting it at logon
 
-`Rainbow Claude Monitor.bat` стартует сервер свёрнутым; браузер открывает сам
-сервер, если `openBrowser: true`. Чтобы панель поднималась при входе в систему,
-положите ярлык на этот .bat в автозагрузку:
+`Rainbow Claude Monitor.bat` starts the server minimised; the browser is opened
+by the server itself when `openBrowser: true`. To have the panel come up when
+you log in, drop a shortcut to that .bat into startup:
 
 ```powershell
 explorer shell:startup
@@ -173,69 +177,70 @@ explorer shell:startup
 
 ---
 
-## Как это устроено
+## How it works
 
-| Файл | Роль |
+| File | Role |
 |---|---|
-| `server.ps1` | HTTP-сервер на `HttpListener`: отдаёт страницу и JSON, ходит за лимитами |
-| `index.html` | вся морда: шкалы, карточки, темы, цвета |
-| `config.json` | ваши настройки (в git не попадает) |
-| `config.example.json` | образец со всеми ключами и комментариями |
-| `Rainbow Claude Monitor.bat` | запуск свёрнутым, годится для автозагрузки |
-| `poke.ps1` | пишет текст и клавиши в консоль чужого процесса (`WriteConsoleInput`) |
-| `launch-color.ps1` | дожидается только что открытого окна, отвечает на вопрос о доверии, просит покрасить |
-| `colors.json` | текущий цвет каждого аккаунта (состояние, в git не попадает) |
-| `PROJECT.md` | подробный разбор: почему сделано именно так |
+| `server.ps1` | HTTP server on `HttpListener`: serves the page and the JSON, fetches the limits |
+| `index.html` | the whole face: gauges, cards, themes, colours |
+| `config.json` | your settings (kept out of git) |
+| `config.example.json` | the sample with every key and a comment on each |
+| `Rainbow Claude Monitor.bat` | starts it minimised, fit for startup |
+| `poke.ps1` | writes text and keys into another process's console (`WriteConsoleInput`) |
+| `launch-color.ps1` | waits for the window that just opened, answers the trust prompt, asks for the paint |
+| `colors.json` | the current colour of each account (state, kept out of git) |
+| `PROJECT.md` | the long version: why every piece is the way it is |
 
-**Откуда берутся лимиты.** Основной источник — `GET
-https://api.anthropic.com/api/oauth/usage` с OAuth-токеном аккаунта. Токен
-читается из `<configDir>/.credentials.json` в момент запроса, никуда не
-сохраняется и не логируется. Запасной — `cachedUsageUtilization` в
-`<configDir>/.claude.json`; его обновляет только сам Claude Code при `/status`,
-поэтому он часто устаревает, и карточка тогда подписана «кэш · N назад».
+**Where the limits come from.** The primary source is `GET
+https://api.anthropic.com/api/oauth/usage` with the account's own OAuth token,
+read from `<configDir>/.credentials.json` at request time — never stored, never
+logged. The fallback is `cachedUsageUtilization` inside
+`<configDir>/.claude.json`, which only Claude Code itself refreshes (on
+`/status`), so it is often a day old and the card is then labelled
+`cache · N ago`.
 
-**Откуда статус сессий.** `<configDir>/sessions/<pid>.json` — реестр, который
-ведёт сам Claude Code. Сессия считается живой, только если её pid ещё есть в
-процессах, а запись моложе 12 часов.
+**Where the session state comes from.** `<configDir>/sessions/<pid>.json` is a
+registry Claude Code keeps itself. A session counts as alive only while its pid
+is still among the running processes and the record is younger than 12 hours.
 
-**Почему цвет хранит панель, а не Claude.** Команда `/color` меняет цвет только
-в памяти запущенного окна и никуда его не пишет — ни в `settings.json`, ни в
-`sessions/*.json`. Поэтому выбор лежит в `colors.json`, а панель шлёт `/color`
-в конкретное окно по pid.
+**Why the panel holds the colour, not Claude.** `/color` changes the colour only
+in the memory of the running window and writes it nowhere — not to
+`settings.json`, not to `sessions/*.json`. So the choice lives in `colors.json`,
+and the panel sends `/color` into one specific window by pid.
 
-Подробности каждого решения — в `PROJECT.md`.
+The reasoning behind each decision is in `PROJECT.md`.
 
 ## API
 
-- `GET /` — страница
-- `GET /api/config` — блок `ui` для клиента
-- `GET /api/stats` — `{ cpu, ram, host, accounts[] }`, у аккаунта есть `source: api|cache`
-- `GET /api/debug` — что вернул живой опрос лимитов (коды и ошибки, без токенов)
-- `POST /api/refresh` — сбросить кэш живого опроса
-- `POST /api/color?id=&name=[&pid=]` — покрасить окна аккаунта
-- `POST /api/launch?id=` — запустить лаунчер аккаунта
+- `GET /` — the page
+- `GET /api/config` — the `ui` block for the client
+- `GET /api/stats` — `{ cpu, ram, host, accounts[] }`, each account carries `source: api|cache`
+- `GET /api/debug` — what the live poll returned (codes and errors, no tokens)
+- `POST /api/refresh` — drop the live cache and re-fetch
+- `POST /api/color?id=&name=[&pid=]` — paint an account's windows
+- `POST /api/launch?id=` — start an account's launcher
 
-## Приватность
+## Privacy
 
-Сервер слушает только `127.0.0.1`, а наружу ходит единственным адресом —
-`api.anthropic.com` за вашими же лимитами (плюс раз в сутки за временем заката).
-OAuth-токены читаются на лету и не попадают ни в логи, ни в `/api/debug`, ни на
-страницу. `config.json` и `colors.json` исключены из git, чтобы пути и раскладка
-ваших аккаунтов не уехали в репозиторий.
+The server listens on `127.0.0.1` only, and the single address it reaches out to
+is `api.anthropic.com` for your own limits (plus one sunset lookup a day). OAuth
+tokens are read on the fly and never reach the logs, `/api/debug` or the page.
+`config.json` and `colors.json` are excluded from git so the paths and layout of
+your accounts stay off the repository.
 
-## Оговорки
+## Caveats
 
-- `/api/oauth/usage` — внутренняя ручка Claude Code, не публичный API: может
-  измениться без предупреждения. Любая ошибка тихо роняет аккаунт на кэш,
-  панель продолжает работать, причина видна в `/api/debug`.
-- Кнопка Launch и покраска — Windows-специфичные: они пишут в консоль чужого
-  процесса через `WriteConsoleInput`.
-- Если панель запущена изнутри самого Claude Code, сервер вычищает из своего
-  окружения все `CLAUDE*`, `AI_AGENT`, `NO_COLOR` — иначе новое окно унаследует
-  чужой аккаунт и не покрасится.
+- `/api/oauth/usage` is an internal Claude Code endpoint, not a public API: it
+  can change without notice. Any error quietly drops the account to the cache,
+  the panel keeps working, and the reason shows up in `/api/debug`.
+- The Launch button and the painting are Windows-specific: they write into
+  another process's console through `WriteConsoleInput`.
+- When the panel is started from inside Claude Code itself, the server strips
+  `CLAUDE*`, `AI_AGENT` and `NO_COLOR` from its own environment — otherwise a
+  new window inherits the wrong account and never gets painted.
 
-## Идеи на потом
+## Ideas for later
 
-- GPU через `nvidia-smi`
-- звук или уведомление при переходе лимита за 90 %
-- обновление токена по `refresh_token`, когда access протухнет
+- GPU through `nvidia-smi`
+- a sound or a notification when a limit crosses 90%
+- refreshing the token with `refresh_token` once the access one expires
