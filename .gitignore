@@ -21,3 +21,9 @@ colors.json
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Finish-sound volume, written by the header slider.
+sound.json
+
+# Personal notification clip, picked per machine by the Stop hook.
+sounds/

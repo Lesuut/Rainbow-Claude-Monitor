@@ -14,7 +14,7 @@ still has headroom and whether the machine itself is choking.
 | File | Role |
 |---|---|
 | `server.ps1` | local HTTP server (`HttpListener`, `127.0.0.1:8777`): serves the page and the JSON |
-| `index.html` | the whole face: two round gauges and one card per account |
+| `index.html` | the whole face: up to three round gauges and one card per account |
 | `config.json` | everything configurable; `config.example.json` is the annotated sample |
 | `Rainbow Claude Monitor.bat` | starts the server minimised (fit for startup) |
 | `poke.ps1` | writes text or keys into another process's console (`WriteConsoleInput`) |
@@ -206,7 +206,6 @@ afterwards.
 
 ## Possible additions
 
-- GPU through `nvidia-smi`, if it is ever needed
 - a sound or notification when a limit crosses 90 %
 - refreshing the token with `refresh_token` when the access token expires
   (today it simply falls back to the cache)

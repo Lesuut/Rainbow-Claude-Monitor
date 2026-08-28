@@ -253,6 +253,5 @@ your accounts stay off the repository.
 
 ## Ideas for later
 
-- GPU through `nvidia-smi`
 - a sound or a notification when a limit crosses 90%
 - refreshing the token with `refresh_token` once the access one expires

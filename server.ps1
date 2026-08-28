@@ -43,6 +43,7 @@ $ConfigPath = Join-Path $Root 'config.json'
 $ColorsPath = Join-Path $Root 'colors.json'
 $PokePath   = Join-Path $Root 'poke.ps1'
 $LaunchColorPath = Join-Path $Root 'launch-color.ps1'
+$SoundPath  = Join-Path $Root 'sound.json'
 
 $UsageUrl   = 'https://api.anthropic.com/api/oauth/usage'
 $ColorNames = @('red','orange','yellow','green','cyan','blue','purple','pink','default')
@@ -57,7 +58,8 @@ $StarterConfig = @'
   "openBrowser": true,
   "location": { "lat": 50.4501, "lng": 30.5234 },
   "ui": { "columns": "auto", "theme": "auto", "duskMinutes": 45, "refreshMs": 1000,
-          "showMachine": true, "showSevenDay": true, "hotPercent": 90, "accents": {} },
+          "showMachine": true, "showSevenDay": true,
+          "hotPercent": 90, "accents": {} },
   "usage": { "source": "auto", "liveOkSec": 120, "liveBadSec": 600 },
   "launch": { "autoColor": true, "trustPromptKeys": "down,enter", "waitSec": 90 },
   "accounts": [
@@ -251,6 +253,29 @@ function Set-Color {
 
 # Nothing is coloured until a live window is told to be. Called once at startup.
 function Reset-Colors { Write-Colors (New-ColorMap) }
+# ---------- notification sound ----------
+# The Stop hook (~/.claude/hooks/claude-done-sound.ps1) re-reads sound.json every
+# time a session ends, so the slider in the header takes effect on the next play
+# without anything having to be restarted.
+function Get-SoundVolume {
+    if (Test-Path $SoundPath) {
+        try {
+            $saved = Get-Content $SoundPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $v = [double]$saved.volume
+            if ($v -ge 0 -and $v -le 1) { return $v }
+        } catch { }
+    }
+    return 0.7
+}
+
+function Set-SoundVolume {
+    param([double]$volume)
+    if ($volume -lt 0) { $volume = 0 }
+    if ($volume -gt 1) { $volume = 1 }
+    $volume = [math]::Round($volume, 2)
+    ([ordered]@{ volume = $volume } | ConvertTo-Json) | Set-Content -Path $SoundPath -Encoding UTF8
+    return $volume
+}
 
 # Types "/color <name>" into every open console of this account, the same way the
 # user would. poke.ps1 has to run out-of-process - see the note in that file.
@@ -696,6 +721,24 @@ try {
                 '^/api/refresh$' {
                     $liveCache.Clear()
                     Send-Json $ctx @{ ok = $true }
+                    break
+                }
+                '^/api/sound$' {
+                    $vol = $ctx.Request.QueryString['volume']
+                    if ([string]::IsNullOrEmpty($vol)) {
+                        Send-Json $ctx @{ ok = $true; volume = (Get-SoundVolume) }
+                        break
+                    }
+                    # The slider sends an invariant decimal - parse it as one, or a
+                    # comma-decimal locale would read 0.5 as 5.
+                    $parsed = 0.0
+                    $okParse = [double]::TryParse($vol, [Globalization.NumberStyles]::Float,
+                                                  [Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)
+                    if (-not $okParse) {
+                        Send-Json $ctx @{ ok = $false; error = 'bad volume' } 400
+                        break
+                    }
+                    Send-Json $ctx @{ ok = $true; volume = (Set-SoundVolume $parsed) }
                     break
                 }
                 '^/api/launch$' {

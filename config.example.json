@@ -29,6 +29,7 @@
     "//showMachine": "Show the CPU / memory row.",
     "showMachine": true,
 
+
     "//showSevenDay": "Show the weekly limit bar under the 5-hour one.",
     "showSevenDay": true,
 

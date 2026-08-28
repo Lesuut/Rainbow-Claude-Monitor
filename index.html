@@ -65,6 +65,30 @@
   .theme-btn + .theme-btn{border-left:2px solid var(--edge)}
   .theme-btn-on{background:var(--mustard);color:var(--ground);font-weight:700}
 
+  /* Volume of the sound a finished session plays. Sits beside the theme
+     toggle and writes straight through to sound.json. */
+  .vol{display:flex;align-items:center;gap:7px}
+  .vol-icon{
+    font-family:var(--f-mono);font-size:13px;line-height:1;
+    color:var(--muted);width:14px;text-align:center;user-select:none;
+  }
+  .vol-slider{
+    -webkit-appearance:none;appearance:none;
+    width:64px;height:4px;border-radius:2px;
+    background:var(--edge);cursor:pointer;
+  }
+  .vol-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;
+    background:var(--mustard);border:0;cursor:pointer;
+  }
+  .vol-slider::-moz-range-thumb{
+    width:12px;height:12px;border-radius:50%;
+    background:var(--mustard);border:0;cursor:pointer;
+  }
+  .vol-muted .vol-slider::-webkit-slider-thumb{background:var(--muted)}
+  .vol-muted .vol-slider::-moz-range-thumb{background:var(--muted)}
+
   .lamp{
     width:18px;height:18px;border-radius:50%;
     background:var(--mustard);box-shadow:0 0 18px var(--mustard);
@@ -89,6 +113,8 @@
     min-height:0;overflow:hidden;
   }
   .arcs{height:100%;width:auto;aspect-ratio:1/1;flex:0 0 auto}
+  /* .instr sets display:flex, which would otherwise outrank [hidden]. */
+  .instr[hidden]{display:none}
   .instr-icon{display:block;width:52px;height:52px;margin-bottom:10px;color:var(--mustard)}
   .instr-key{
     font-family:var(--f-display);font-weight:700;
@@ -247,6 +273,11 @@
       <button class="theme-btn" data-mode="light" title="Light">☀</button>
       <button class="theme-btn" data-mode="auto" title="Follows the sunset at your coordinates">Auto</button>
       <button class="theme-btn" data-mode="dark" title="Dark">☾</button>
+    </div>
+    <div class="vol" id="vol" title="Volume of the sound played when a session finishes">
+      <span class="vol-icon" id="volIcon" aria-hidden="true">▶</span>
+      <input class="vol-slider" id="volSlider" type="range" min="0" max="100" step="5"
+             value="70" aria-label="Finish sound volume">
     </div>
     <span class="lamp lamp-off" id="lamp"></span>
   </header>
@@ -416,6 +447,39 @@ document.getElementById("theme").addEventListener("click", function(ev){
   if (b) setMode(b.dataset.mode);
 });
 
+/* ══ finish-sound volume ═══════════════════════════════════════════════════
+   One slider over /api/sound. The Stop hook reads sound.json at play time, so
+   a drag here is heard on the next session that ends - nothing to restart. */
+var volBox    = document.getElementById("vol");
+var volSlider = document.getElementById("volSlider");
+var volIcon   = document.getElementById("volIcon");
+var volSaveTimer = null;
+
+function paintVol(v){
+  volBox.classList.toggle("vol-muted", v <= 0);
+  volIcon.textContent = v <= 0 ? "×" : (v < 0.5 ? "▸" : "▶");
+  volBox.title = "Finish sound: " + Math.round(v * 100) + "%";
+}
+
+fetch("/api/sound", { cache:"no-store" })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (typeof d.volume !== "number") return;
+    volSlider.value = Math.round(d.volume * 100);
+    paintVol(d.volume);
+  })
+  .catch(function(){});
+
+/* Dragging fires continuously - paint at once, write once the drag settles. */
+volSlider.addEventListener("input", function(){
+  var v = Number(volSlider.value) / 100;
+  paintVol(v);
+  clearTimeout(volSaveTimer);
+  volSaveTimer = setTimeout(function(){
+    fetch("/api/sound?volume=" + v.toFixed(2), { method:"POST" }).catch(function(){});
+  }, 250);
+});
+
 /* ══ arcs ══════════════════════════════════════════════════════════════════ */
 var SVGNS = "http://www.w3.org/2000/svg";
 var CX = 100, CY = 100, START = 225, SWEEP = 270;
@@ -526,7 +590,7 @@ function frame(){
 }
 
 buildArcs("cpuArcs", false);
-buildArcs("ramArcs", true);
+buildArcs("ramArcs", false);
 applyPalette(night.shown);
 
 /* ══ formatting ════════════════════════════════════════════════════════════ */
