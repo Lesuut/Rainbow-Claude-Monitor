@@ -1,7 +1,5 @@
 # Rainbow Claude Monitor
 
-**English** · [Русский](README.ru.md)
-
 A small local web panel for your second screen: machine load and the live state
 of every one of your Claude Code accounts, all at a glance.
 
@@ -63,9 +61,24 @@ No admin rights: the `127.0.0.1` prefix is not a reserved URL namespace.
 
 ---
 
-## Option 1: just ask your own Claude to set it up
+## Installation
 
-The fastest path. Clone the repo, open Claude Code in that folder and say
+Get the code first — either way works:
+
+```powershell
+git clone https://github.com/Lesuut/Rainbow-Claude-Monitor.git
+cd Rainbow-Claude-Monitor
+```
+
+or download the ZIP from the repository page and unpack it anywhere. Nothing is
+installed and nothing is registered: the folder is the whole program.
+
+Then pick one of the two paths below — hand the setup to Claude, or write the
+config yourself.
+
+### Option 1: just ask your own Claude to set it up
+
+The fastest path. Open Claude Code in the folder you just cloned and say
 something like:
 
 > Read README.md and PROJECT.md in this folder. Find every Claude Code account
@@ -82,15 +95,11 @@ coordinates, run `server.ps1` and show you the result. From then on you can keep
 asking it: "add a fourth account", "move it to port 9000", "make the theme
 always dark", "put a shortcut in startup".
 
----
+### Option 2: set it up by hand
 
-## Option 2: set it up by hand
-
-### Quick start
+Start the server:
 
 ```powershell
-git clone https://github.com/Lesuut/Rainbow-Claude-Monitor.git
-cd Rainbow-Claude-Monitor
 powershell -ExecutionPolicy Bypass -File server.ps1
 ```
 
@@ -100,7 +109,7 @@ On the first run `config.json` writes itself — one account pointing at
 After that you edit `config.json` and restart the server. The full sample with
 every key and a comment on each is `config.example.json`.
 
-### Accounts
+#### Accounts
 
 The one thing you really have to configure is `accounts[]`. One entry per
 account:
@@ -135,7 +144,7 @@ Get-ChildItem $env:USERPROFILE -Directory -Filter ".claude*" | Select-Object Nam
 
 A real account directory contains `.credentials.json` and `.claude.json`.
 
-### Everything else
+#### Everything else
 
 | Key | Default | What it does |
 |---|---|---|
@@ -165,7 +174,7 @@ copy of the panel needs:
 powershell -ExecutionPolicy Bypass -File server.ps1 -Port 8778 -NoBrowser
 ```
 
-### Running it and starting it at logon
+## Running it and starting it at logon
 
 `Rainbow Claude Monitor.bat` starts the server minimised; the browser is opened
 by the server itself when `openBrowser: true`. To have the panel come up when

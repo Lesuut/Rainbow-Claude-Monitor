@@ -1,20 +1,20 @@
-# Личная конфигурация: пути к аккаунтам и каталогам этой машины.
-# Шаблон лежит в config.example.json, а server.ps1 создаёт config.json сам
-# при первом запуске, если его нет.
+# Personal configuration: the account and directory layout of one machine.
+# The template is config.example.json, and server.ps1 writes config.json itself
+# on the first run when it is missing.
 config.json
 
-# Состояние времени выполнения.
+# Runtime state.
 colors.json
 .claims/
 
-# Резервные копии и мусор редакторов.
+# Backups and editor litter.
 *.bak
 *.orig
 *~
 .vscode/
 .idea/
 
-# Логи.
+# Logs.
 *.log
 
 # Windows / macOS.
