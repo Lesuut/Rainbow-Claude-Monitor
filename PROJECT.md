@@ -146,12 +146,31 @@ session is impossible — `sessions/<pid>.json` only appears after the folder
 trust question is answered, and that question is exactly what the waiter is
 waiting on.
 
+That search runs every `launch.pollMs` and is deliberately two-tiered.
+`Get-Process` (tens of milliseconds) answers "is there a `claude.exe` young
+enough to be ours", and only when there is does the waiter pay for the CIM query
+that carries the parent pid. The first version enumerated every process on the
+machine on every tick, which cost about a quarter of a second each time and made
+up most of the gap between the click and the answered prompt.
+
 The process shows up while its TUI is still being drawn, so a key pressed right
-away lands before there is a prompt to take it: the waiter sleeps a second, then
-sends `poke.ps1 -Keys "down,enter"` — "Yes, I trust this folder". If the window
-already has a `sessions/<pid>.json` it answered that question on an earlier run
-and its input line is live, so no keys are sent: Down plus Enter would be typed
-into the conversation.
+away lands before there is a prompt to take it. Rather than guess how long that
+takes, `poke.ps1 -WaitFor trust` attaches to the new console and reads its
+visible screen (`ReadConsoleOutputCharacterW` on `CONOUT$`) until the question is
+actually up, then sends `down,enter` — "Yes, I trust this folder". That is both
+quicker than a fixed sleep and safer than one: when the prompt never appears the
+wait ends with nothing typed (exit 3), instead of Down plus Enter landing in a
+live input line. Windows that already have a `sessions/<pid>.json` are skipped
+before that, since they answered the question on an earlier run.
+
+A console whose screen cannot be read at all is not evidence that the prompt is
+absent, so that case falls back to the old blind wait and presses anyway. Setting
+`launch.trustPromptText` to `""` turns the watching off everywhere and waits
+`launch.readyMs` instead.
+
+`poke.ps1` compiles its console interop into `.cache/poke.dll` on first use and
+loads it from there afterwards; the server kicks off a `-Warm` build at startup,
+so the session's first Launch does not pay for `csc`.
 
 Colour goes on last, and only once the session file exists (up to a minute of
 waiting) — that is the same moment the panel starts counting the window as

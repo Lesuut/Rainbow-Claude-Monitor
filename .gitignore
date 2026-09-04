@@ -7,6 +7,9 @@ config.json
 colors.json
 .claims/
 
+# Compiled console interop, rebuilt by poke.ps1 whenever it is missing.
+.cache/
+
 # Backups and editor litter.
 *.bak
 *.orig

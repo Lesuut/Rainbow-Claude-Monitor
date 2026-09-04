@@ -166,6 +166,12 @@ A real account directory contains `.credentials.json` and `.claude.json`.
 | `launch.autoColor` | `true` | paint the window after launching it |
 | `launch.trustPromptKeys` | `"down,enter"` | keys sent to answer "Do you trust this folder?"; `""` disables it |
 | `launch.waitSec` | `90` | how long to wait for the launched window to appear |
+| `launch.trustPromptText` | `"trust"` | text the prompt is recognised by — the keys go the instant it is on screen, and not at all if it never shows; `""` waits `readyMs` blind instead |
+| `launch.trustWaitMs` | `4000` | how long that text is waited for |
+| `launch.pollMs` | `120` | gap between two looks for the window that just opened |
+| `launch.readyMs` | `500` | blind wait before the keys, used only when `trustPromptText` is `""` |
+| `launch.keyDelayMs` | `90` | gap between the trust-prompt keys |
+| `launch.settleMs` | `150` | wait after the session file appears, before `/color` is typed |
 
 Command-line arguments override the config for one run, which is what a second
 copy of the panel needs:
@@ -198,8 +204,9 @@ and when the panel is already running it simply opens the browser at it.
 | `config.json` | your settings (kept out of git) |
 | `config.example.json` | the sample with every key and a comment on each |
 | `Rainbow Claude Monitor.bat` | starts it minimised, fit for startup |
-| `poke.ps1` | writes text and keys into another process's console (`WriteConsoleInput`) |
+| `poke.ps1` | writes text and keys into another process's console (`WriteConsoleInput`), and can wait for a prompt to be on screen first |
 | `launch-color.ps1` | waits for the window that just opened, answers the trust prompt, asks for the paint |
+| `.cache/poke.dll` | `poke.ps1`'s console interop, compiled once (state, kept out of git) |
 | `colors.json` | the current colour of each account (state, kept out of git) |
 | `PROJECT.md` | the long version: why every piece is the way it is |
 

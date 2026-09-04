@@ -61,7 +61,9 @@ $StarterConfig = @'
           "showMachine": true, "showSevenDay": true,
           "hotPercent": 90, "accents": {} },
   "usage": { "source": "auto", "liveOkSec": 120, "liveBadSec": 600 },
-  "launch": { "autoColor": true, "trustPromptKeys": "down,enter", "waitSec": 90 },
+  "launch": { "autoColor": true, "trustPromptKeys": "down,enter", "waitSec": 90,
+              "trustPromptText": "trust", "trustWaitMs": 4000,
+              "pollMs": 120, "readyMs": 500, "keyDelayMs": 90, "settleMs": 150 },
   "accounts": [
     { "id": "main", "label": "Claude", "configDir": ".claude", "accent": "blue" }
   ]
@@ -151,6 +153,20 @@ $LaunchCfg  = Get-Prop $Cfg 'launch' $null
 $AutoColor  = [bool](Get-Prop $LaunchCfg 'autoColor' $true)
 $TrustKeys  = [string](Get-Prop $LaunchCfg 'trustPromptKeys' 'down,enter')
 $LaunchWait = [int](Get-Prop $LaunchCfg 'waitSec' 90)
+
+# How hard the launch waiter and poke.ps1 push. The defaults suit a machine that
+# opens a Claude window in about a second, and each one is close to the smallest
+# value that still lands: raise them, never lower, if a slower machine starts
+# missing the trust prompt or typing /color into a console that is not ready.
+$LaunchPollMs  = [int](Get-Prop $LaunchCfg 'pollMs' 120)      # between two looks for the new window
+$LaunchReadyMs = [int](Get-Prop $LaunchCfg 'readyMs' 500)     # after it appears, before the keys
+$KeyDelayMs    = [int](Get-Prop $LaunchCfg 'keyDelayMs' 90)   # between two trust-prompt keys
+$SettleMs      = [int](Get-Prop $LaunchCfg 'settleMs' 150)    # after the session file, before /color
+
+# The trust prompt is answered as soon as it is on the new window's screen
+# rather than after a guessed delay. "" falls back to waiting readyMs blind.
+$TrustText     = [string](Get-Prop $LaunchCfg 'trustPromptText' 'trust')
+$TrustWaitMs   = [int](Get-Prop $LaunchCfg 'trustWaitMs' 4000)
 
 # ---------- accounts ----------
 $Accounts = @()
@@ -622,6 +638,14 @@ function Send-Json {
 
 Reset-Colors
 
+# poke.ps1 compiles its console interop the first time it runs. Paying for that
+# here, in the background, keeps it out of the session's first Launch.
+try {
+    Start-Process powershell -WindowStyle Hidden -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PokePath`"", '-Warm'
+    ) | Out-Null
+} catch { }
+
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$Port/")
 try {
@@ -764,6 +788,9 @@ try {
                         Start-Process -FilePath $exePath -WorkingDirectory $workDir | Out-Null
                     }
 
+                    $accent = (Get-Colors)[$acc.id]
+                    if (-not $accent -or $accent -eq 'default') { $accent = $acc.accent }
+
                     # A window that has just opened wears nothing. Hand the wait
                     # off to its own process - the new console takes seconds to
                     # be ready, and this loop must stay free for the next request.
@@ -771,14 +798,17 @@ try {
                         Start-Process powershell -WindowStyle Hidden -ArgumentList @(
                             '-NoProfile', '-ExecutionPolicy', 'Bypass',
                             '-File', "`"$LaunchColorPath`"",
-                            '-Dir', "`"$($acc.dirPath)`"", '-Id', $acc.id, '-Name', $acc.accent,
+                            '-Dir', "`"$($acc.dirPath)`"", '-Id', $acc.id, '-Name', $accent,
                             '-Exe', "`"$($acc.exeName)`"", '-Port', $Port,
                             '-Keys', "`"$TrustKeys`"", '-TimeoutSec', $LaunchWait,
-                            '-Color', ([int][bool]$AutoColor)
+                            '-Color', ([int][bool]$AutoColor),
+                            '-PollMs', $LaunchPollMs, '-ReadyMs', $LaunchReadyMs,
+                            '-KeyDelayMs', $KeyDelayMs, '-SettleMs', $SettleMs,
+                            '-WaitFor', "`"$TrustText`"", '-WaitMs', $TrustWaitMs
                         ) | Out-Null
                     }
 
-                    Send-Json $ctx @{ ok = $true; launched = $exePath; accent = $acc.accent }
+                    Send-Json $ctx @{ ok = $true; launched = $exePath; accent = $accent }
                     break
                 }
                 default {

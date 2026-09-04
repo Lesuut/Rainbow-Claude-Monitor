@@ -59,7 +59,27 @@
     "trustPromptKeys": "down,enter",
 
     "//waitSec": "How long to wait for the launched window to appear before giving up.",
-    "waitSec": 90
+    "waitSec": 90,
+
+    "//trustPromptText": "Text the trust prompt is recognised by. The keys are pressed the instant it shows up on the new window's screen, and are not pressed at all if it never does - so a window that needs no answer is never typed into. \"\" turns the watching off and falls back to waiting readyMs blind.",
+    "trustPromptText": "trust",
+
+    "//trustWaitMs": "How long that text is waited for before giving up on it.",
+    "trustWaitMs": 4000,
+
+    "//speed": "The delays that decide how fast a new window is answered and painted. Each default is close to the smallest value that still lands - raise them, never lower, if a slow machine starts missing the trust prompt.",
+
+    "//pollMs": "Gap between two looks for the window that was just launched.",
+    "pollMs": 120,
+
+    "//readyMs": "Blind wait before the trust-prompt keys, used only when trustPromptText is \"\".",
+    "readyMs": 500,
+
+    "//keyDelayMs": "Gap between two trust-prompt keys, so the menu can repaint between them.",
+    "keyDelayMs": 90,
+
+    "//settleMs": "Wait after the window registers its session, before /color is typed.",
+    "settleMs": 150
   },
 
   "//accounts": "One entry per Claude account. id: any short slug, unique. label: shown on the card. configDir: CLAUDE_CONFIG_DIR of that account - absolute, or relative to %USERPROFILE%. launcher (optional): exe or shortcut the Launch button starts - absolute, or a name looked up on the Desktop, in %USERPROFILE% and in PATH; omit it and the card simply has no Launch button. launchArgs (optional): array of arguments. workingDir (optional): folder the window opens in, default %USERPROFILE%. accent (optional): colour a launched window is painted with - red orange yellow green cyan blue purple pink default.",
