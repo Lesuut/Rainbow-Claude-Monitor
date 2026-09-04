@@ -1,12 +1,18 @@
 # Rainbow Claude Monitor
 
-A small local web panel for your second screen: machine load and the live state
-of every one of your Claude Code accounts, all at a glance.
+**A Claude Code monitor for Windows: usage limits, active sessions, CPU and RAM
+across several Claude accounts, on one local dashboard.**
+
+Rainbow Claude Monitor is a small local web panel for your second screen — a
+Claude Code usage monitor that tracks the 5-hour and weekly limit of every
+account you have, shows which sessions are working and which are waiting for
+you, watches the machine's CPU and memory, and launches any account with one
+button. No Node, no Python, no cloud: Windows PowerShell and a browser.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshot-dark.jpg" alt="The panel at night"></td>
-    <td width="50%"><img src="docs/screenshot-light.jpg" alt="The panel during the day"></td>
+    <td width="50%"><img src="docs/screenshot-dark.jpg" alt="Claude Code usage monitor, dark theme: 5-hour and weekly limit bars for three Claude accounts, with CPU and RAM gauges"></td>
+    <td width="50%"><img src="docs/screenshot-light.jpg" alt="Claude Code monitor, light theme: multiple Claude accounts with live session status on a local dashboard"></td>
   </tr>
   <tr>
     <td align="center"><b>night</b></td>
@@ -17,7 +23,7 @@ of every one of your Claude Code accounts, all at a glance.
 The same panel: the theme is not a switch you flip, it drifts along with sunset
 in your city.
 
-## Why
+## Why monitor multiple Claude accounts
 
 If you run several Claude accounts (personal, second personal, work), the only
 way to find out where you still have headroom is to open a window and type
@@ -50,6 +56,38 @@ sun goes down, and a card blinks briefly the moment its Claude finishes a turn.
 | **Themes** | light / auto / dark; auto drifts with sunrise and sunset at your coordinates |
 | **No dependencies** | Windows PowerShell 5.1 and a browser. No Node, no Python, nothing to install |
 | **Local** | listens on `127.0.0.1` only, looks nowhere else, collects nothing |
+
+## FAQ
+
+### How do I monitor multiple Claude Code accounts at once?
+
+Every account gets one entry in `accounts[]`, pointing at its own
+`CLAUDE_CONFIG_DIR` (`~/.claude`, `~/.claude_work`, and so on). The panel then
+polls each of them side by side, so one screen answers "which account still has
+headroom" without opening a window and typing `/status`.
+
+### Where do the usage numbers come from?
+
+From Claude Code's own OAuth token for each account: a live request for the
+5-hour and weekly windows, falling back to the figures Claude Code caches
+locally when the request fails. Nothing is stored and nothing is sent anywhere
+else — see [How it works](#how-it-works).
+
+### Does it work with a single Claude account?
+
+Yes. On the first run it writes a `config.json` with one account pointing at
+`~/.claude`, and the panel is a plain Claude Code usage monitor with one card.
+
+### Is there a version for macOS or Linux?
+
+Not yet. Reading the limits is portable, but the Launch button and the window
+painting go through the Windows console API (`WriteConsoleInput`).
+
+### How is it different from a CLI usage monitor?
+
+It watches accounts rather than a terminal: several at once, next to live
+session state (working / waiting for input) and the machine's CPU and RAM, in a
+browser tab that is meant to sit on a second monitor all day.
 
 ## Requirements
 
